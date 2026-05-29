@@ -13,7 +13,7 @@ ChromaDB と OpenAI API を使った、ローカル実行用の RAG 質問応答
 ## 必要環境
 
 - Python 3.10+
-- OpenAI API Key
+- OpenAI API Key（任意。未設定時はローカルの mock OpenAI で動作します）
 
 ## インストール
 
@@ -38,6 +38,14 @@ OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 古い変数名 `gpt` にも対応していますが、標準の `OPENAI_API_KEY` を推奨します。
+
+`OPENAI_API_KEY` と `gpt` のどちらも設定されていない場合でも、アプリは例外で停止しません。
+その場合はローカルの mock OpenAI を自動的に使い、固定的な疑似回答と安定した疑似 embedding で
+RAG の検索・UI・プロンプト生成の流れを確認できます。実際の OpenAI 応答を使う場合だけ `.env` に
+API Key を設定してください。
+
+`.env` に API Key がある環境でも mock 動作を確認したい場合は、実行時に `RAG_MOCK_OPENAI=1` を
+設定してください。
 
 ## 使い方
 

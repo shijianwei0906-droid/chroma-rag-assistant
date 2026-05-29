@@ -13,6 +13,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -21,12 +22,31 @@ if hasattr(sys.stdout, "reconfigure"):
 
 
 DEFAULT_MODEL = "gpt-4.1-mini"
+TRUTHY_VALUES = {"1", "true", "yes", "on"}
 STOP_CHARS = set("のはがをにでとやもへからまでですますするしたしているあるこれそれどれ誰何いつどこ？。、,.!? ")
 SYSTEM_PROMPT = """あなたは社内ナレッジベースの質問応答アシスタントです。
 必ず提示された資料だけに基づいて回答し、推測で補完しないでください。
 資料に答えがない場合は「分かりません」と回答してください。
 回答は簡潔にし、根拠となる資料もできるだけ示してください。
 """
+
+
+class MockOpenAIClient:
+    """Small local stand-in used when no API key is configured."""
+
+    def __init__(self) -> None:
+        self.responses = SimpleNamespace(create=self._create_response)
+
+    def _create_response(self, **kwargs):
+        prompt = str(kwargs.get("input", ""))
+        answer = (
+            "[mock-openai] OPENAI_API_KEY is not set, so this is a local simulated "
+            "answer. The retrieval pipeline still ran; configure OPENAI_API_KEY "
+            "in .env to get a real model response."
+        )
+        if prompt:
+            answer += "\n\nContext preview:\n" + prompt[:500]
+        return SimpleNamespace(output_text=answer)
 
 
 @dataclass
@@ -74,9 +94,12 @@ def load_env_files() -> None:
 
 def create_openai_client():
     load_env_files()
+    if os.getenv("RAG_MOCK_OPENAI", "").lower() in TRUTHY_VALUES:
+        return MockOpenAIClient()
+
     api_key = os.getenv("OPENAI_API_KEY") or os.getenv("gpt")
     if not api_key:
-        raise RuntimeError("OpenAI API key not found. Set OPENAI_API_KEY or add it to .env.")
+        return MockOpenAIClient()
 
     try:
         from openai import OpenAI
